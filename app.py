@@ -1,237 +1,375 @@
 import streamlit as st
-import requests
-from user_agent import generate_user_agent
+import asyncio
+import aiohttp
+import SignerPy
 import re
-import time
 import random
-import concurrent.futures
+import uuid
+import os
+import sys
 
-# إعدادات الصفحة الأساسية
+# 1. إعدادات الصفحة الأساسية
 st.set_page_config(
-    page_title="زيادة مشاهدات ستوري - gx1ai & gx2ai",
-    page_icon="🚀",
+    page_title="gx1ai & gx2ai | TikTok Views Booster",
+    page_icon="💀",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# تصميم الـ CSS الخاص بالتطبيق وإخفاء حقوق GitHub والهيدر
+# 2. إخفاء أي عناصر تابعة لـ GitHub أو Streamlit مع إضافة هيدر وتصميم نيون مرعب وفخم
 st.markdown("""
 <style>
+    /* إخفاء الهيدر الافتراضي وشريط GitHub كلياً */
     #MainMenu, footer, header, .stAppHeader, div[data-testid="stToolbar"], div[data-testid="stDecoration"] {
         display: none !important;
         visibility: hidden !important;
     }
     
+    /* الخلفية الرئيسية للتطبيق */
     .stApp {
-        background: linear-gradient(135deg, #090e17 0%, #0d1b2a 50%, #1b263b 100%);
-        color: #e0e1dd;
+        background: radial-gradient(circle at center, #0f051d 0%, #05010a 70%, #000000 100%);
+        color: #ffffff;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    
-    .main-card {
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(0, 180, 216, 0.3);
-        border-radius: 20px;
-        padding: 25px 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-        margin-bottom: 20px;
+
+    /* إطار بطاقة الأداة الرئيسي بلمسة مرعبة وفخمة */
+    .dark-scary-card {
+        background: rgba(10, 5, 20, 0.9);
+        border: 2px solid #8a00c4;
+        border-radius: 25px;
+        padding: 30px 20px;
+        box-shadow: 0 0 35px rgba(138, 0, 196, 0.5), inset 0 0 15px rgba(255, 0, 85, 0.3);
         text-align: center;
+        margin-bottom: 25px;
+        backdrop-filter: blur(10px);
     }
-    
-    .channel-logo-img {
-        width: 100px;
-        height: 100px;
+
+    /* صورة القناة مع إطار مضيء مخصص */
+    .profile-img-frame {
+        width: 125px;
+        height: 125px;
         border-radius: 50%;
         object-fit: cover;
-        border: 3px solid #00b4d8;
-        box-shadow: 0 0 20px rgba(0, 180, 216, 0.6);
+        border: 3px solid #ff0055;
+        box-shadow: 0 0 25px #ff0055, 0 0 50px #8a00c4;
         margin-bottom: 15px;
+        animation: scaryGlow 3s infinite alternate;
     }
-    
-    .main-title {
-        color: #90e0ef;
-        font-weight: 800;
-        font-size: 22px;
-        margin-bottom: 8px;
+
+    @keyframes scaryGlow {
+        0% { box-shadow: 0 0 15px #ff0055, 0 0 30px #8a00c4; transform: scale(1); }
+        100% { box-shadow: 0 0 30px #00f0ff, 0 0 60px #ff0055; transform: scale(1.03); }
     }
-    
-    .telegram-btn {
+
+    /* العنوان الرئيسي */
+    .main-scary-title {
+        font-size: 26px;
+        font-weight: 900;
+        background: linear-gradient(90deg, #ff0055, #00f0ff, #ff0055);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 10px rgba(255,0,85,0.5);
+        margin-bottom: 15px;
+        letter-spacing: 1px;
+    }
+
+    /* حاوية أزرار التليجرام */
+    .tg-container {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 15px;
+        flex-wrap: wrap;
+    }
+
+    /* أزرار مضيئة ومتحركة */
+    .neon-btn {
         display: inline-block;
-        background: linear-gradient(135deg, #0088cc 0%, #005f73 100%);
-        color: #ffffff !important;
-        padding: 8px 18px;
-        margin: 5px;
-        border-radius: 50px;
-        text-decoration: none !important;
+        padding: 12px 24px;
         font-weight: bold;
-        font-size: 13px;
-        box-shadow: 0 4px 12px rgba(0, 136, 204, 0.4);
+        font-size: 15px;
+        color: #fff !important;
+        text-decoration: none !important;
+        border-radius: 50px;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
     }
-    
+
+    .btn-gx1 {
+        background: linear-gradient(45deg, #ff0055, #8a00c4);
+        box-shadow: 0 0 15px #ff0055;
+        animation: pulseNeon1 2s infinite;
+    }
+
+    .btn-gx2 {
+        background: linear-gradient(45deg, #00f0ff, #0044ff);
+        box-shadow: 0 0 15px #00f0ff;
+        animation: pulseNeon2 2s infinite;
+    }
+
+    @keyframes pulseNeon1 {
+        0%, 100% { box-shadow: 0 0 15px #ff0055; }
+        50% { box-shadow: 0 0 30px #ff0055, 0 0 10px #ffffff; }
+    }
+
+    @keyframes pulseNeon2 {
+        0%, 100% { box-shadow: 0 0 15px #00f0ff; }
+        50% { box-shadow: 0 0 30px #00f0ff, 0 0 10px #ffffff; }
+    }
+
+    .neon-btn:hover {
+        transform: translateY(-3px) scale(1.05);
+    }
+
+    /* إدخال النصوص والزر في Streamlit */
     div[data-baseweb="input"] {
-        background-color: rgba(15, 23, 42, 0.9) !important;
-        border: 1px solid rgba(0, 180, 216, 0.4) !important;
+        background-color: rgba(15, 5, 25, 0.95) !important;
+        border: 1px solid #8a00c4 !important;
         border-radius: 12px !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 10px rgba(138,0,196,0.3);
     }
-    
+
     .stButton > button {
         width: 100%;
-        background: linear-gradient(90deg, #0077b6 0%, #00b4d8 100%);
+        background: linear-gradient(90deg, #ff0055 0%, #8a00c4 50%, #00f0ff 100%);
+        background-size: 200% auto;
         color: white;
         font-weight: bold;
-        font-size: 16px;
+        font-size: 18px;
         border: none;
         border-radius: 12px;
-        padding: 12px;
-        box-shadow: 0 5px 15px rgba(0, 180, 216, 0.4);
+        padding: 14px;
+        box-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
+        transition: 0.5s;
+    }
+
+    .stButton > button:hover {
+        background-position: right center;
+        box-shadow: 0 0 30px rgba(0, 240, 255, 0.8);
+        transform: scale(1.01);
+    }
+
+    /* شاشة العداد المرسل المضيئة */
+    .counter-display {
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid #00f0ff;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        margin-top: 20px;
+        box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+    }
+
+    .counter-number {
+        font-size: 42px;
+        font-weight: 900;
+        color: #00f0ff;
+        text-shadow: 0 0 15px #00f0ff, 0 0 30px #00f0ff;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# واجهة الهيدر والقنوات والصورة
+# 3. الهيدر وصورة القناة والأزرار المضيئة
 st.markdown("""
-<div class="main-card">
-    <img src="https://files.catbox.moe/868tll.jpg" class="channel-logo-img">
-    <div class="main-title">🚀 أداة زيادة مشاهدات ستوري انستغرام</div>
-    <div style="color: #8d99ae; font-size: 13px; margin-bottom: 15px;">نظام هجوم البروكسيات المتعددة والأجهزة المختلفة (Multi-Threading)</div>
-    <div>
-        <a href="https://t.me/gx1ai" target="_blank" class="telegram-btn">✈️ قناة gx1ai</a>
-        <a href="https://t.me/gx2ai" target="_blank" class="telegram-btn">✈️ قناة gx2ai</a>
+<div class="dark-scary-card">
+    <img src="https://files.catbox.moe/868tll.jpg" class="profile-img-frame">
+    <div class="main-scary-title">🔥 أداة زيادة مشاهدات تيك توك الفائقة 🔥</div>
+    <div style="color: #b8b8b8; font-size: 14px; margin-bottom: 10px;">نظام الرشق التلقائي السريع والمعزز</div>
+    <div class="tg-container">
+        <a href="https://t.me/gx1ai" target="_blank" class="neon-btn btn-gx1">⚡ قناة gx1ai</a>
+        <a href="https://t.me/gx2ai" target="_blank" class="neon-btn btn-gx2">🚀 قناة gx2ai</a>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# قائمة بروكسيات عامة سريعة ومفتوحة للتغيير التلقائي
-PUBLIC_PROXIES = [
-    "http://188.166.220.129:3128",
-    "http://165.225.206.20:80",
-    "http://51.159.22.190:80",
-    "http://138.68.60.8:8080",
-    "http://45.152.188.243:3128",
-    "http://159.65.133.153:80"
-]
+# 4. محرك الرشق والمشاهدات الخاص بالكود الأصلي
+VIDEO_ID_PATTERN = re.compile(r'/video/(\d+)')
 
-def generate_random_device():
-    """توليد جهاز، نظام، وإصدار متصفح مختلف في كل طلب"""
-    platforms = ['"Android"', '"Linux"', '"Windows"', '"iOS"']
-    versions = ['120', '121', '122', '123', '124', '125', '126']
-    
-    device_info = {
-        'user-agent': str(generate_user_agent()),
-        'sec-ch-ua': f'"Chromium";v="{random.choice(versions)}", "Not/A)Brand";v="24"',
-        'sec-ch-ua-mobile': f'?{random.choice([0, 1])}',
-        'sec-ch-ua-platform': random.choice(platforms)
-    }
-    return device_info
+class StreamlitTikTokBooster:
+    def __init__(self, target_url, threads=500):
+        self.url = target_url
+        self.threads = threads
+        self.API = "https://api16-core-c-alisg.tiktokv.com/aweme/v1/aweme/stats/"
+        self.counter = 0
+        self.lock = asyncio.Lock()
+        self.session = None
+        self.video_id = None
+        self.is_running = True
 
-def send_story_request(target_username):
-    """دالة تنفيذ طلب الرشق عبر جهاز مختلف وبانسجام مع السيرفر"""
-    device = generate_random_device()
-    session = requests.Session()
-    
-    # اختيار بروكسي عشوائي من القائمة أو الاتصال المباشر المتجدد
-    use_proxy = random.choice([True, False])
-    proxy_dict = {}
-    if use_proxy:
-        p = random.choice(PUBLIC_PROXIES)
-        proxy_dict = {"http": p, "https": p}
-        
-    try:
-        init_headers = {
-            'authority': 'leofame.com',
-            'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'accept-language': 'ar-EG,ar;q=0.9,en-US;q=0.8,en;q=0.7',
-            'user-agent': device['user-agent'],
-        }
-        
-        # 1. جلب الصفحة لإنشاء جلسة توكن
-        get_resp = session.get(
-            'https://leofame.com/free-instagram-story-views',
-            headers=init_headers,
-            proxies=proxy_dict,
-            timeout=8
-        )
-        
-        token_match = re.search(r'name=["\']token["\']\s+value=["\']([^"\']+)["\']', get_resp.text)
-        dynamic_token = token_match.group(1) if token_match else '00bae069a44c19e57b123978b36af6b6'
-
-        # 2. إرسال الهجوم بالبيانات ورأس الجهاز القادم من بيئة مختلفة
-        headers = {
-            'authority': 'leofame.com',
-            'accept': '*/*',
-            'accept-language': 'ar-EG,ar;q=0.9,en-US;q=0.8,en;q=0.7',
-            'content-type': 'application/x-www-form-urlencoded',
-            'origin': 'https://leofame.com',
-            'referer': 'https://leofame.com/free-instagram-story-views',
-            'sec-ch-ua': device['sec-ch-ua'],
-            'sec-ch-ua-mobile': device['sec-ch-ua-mobile'],
-            'sec-ch-ua-platform': device['sec-ch-ua-platform'],
-            'sec-fetch-dest': 'empty',
-            'sec-fetch-mode': 'cors',
-            'sec-fetch-site': 'same-origin',
-            'user-agent': device['user-agent'],
+        self.static_headers = {
+            'User-Agent': "com.zhiliaoapp.musically.go",
+            'Accept-Encoding': "gzip",
+            'rpc-persist-pyxis-policy-v-tnc': "1",
+            'x-ss-stub': "80867B02FBD2ECA6BA9AA62239D3B1EB",
+            'x-tt-req-timeout': "90000",
+            'sdk-version': "2",
+            'x-tt-token': "039d6f2aba58cb9dbd28dc1e9db2ff355d0291bae03464a6c3fb0cc8df9871bf4f74a8e386c55b5d805c496a78fcf838ff309b97885ecb4cda244e6997aee72f64ba2b61de022e0e9df57f2298a47798ed0b6c9f4d495c56793fbb658044dcc3e3008--0a4e0a201266a032bd35419f3b5dde919e4745ca32b784b956a1d2ee19e5ec79d874f2281220eae667e86a053d169b45d4a44a6dd914e846c78bff2f80647b899c3a1902284d1801220674696b746f6b-3.0.0",
+            'passport-sdk-version': "30990",
+            'x-tt-ultra-lite': "1",
+            'x-vc-bdturing-sdk-version': "2.3.2.i18n",
+            'x-tt-store-region': "iq",
+            'x-tt-store-region-src': "uid",
+            'x-ladon': "abrYTrssSD1CwVlPF9RDXSuywcMgvDEm9png1gwUFF22S8v9",
+            'x-khronos': "1750173135",
+            'x-argus': "tQMfoeL2aSF5jwjvAyYZVA9PuLLbYe73yEdyRXTe2Vd860DTV5P4vgO0DJN0qp/Ys+Slb2Bb79+s++ppBCSZTT5mzL6KB/irb13VhiIpNf7dz/AQUXdtR5yTTKEIivnl9q+jDOJMkSDE9D2+4zW/PrOKqhprYwjUD1NetyG1Oam38wp/fJekNB75vLYTc9Xj4uHiJVuGuCKoUCM2YLi0sBp2mVGfMkPpgdn5f8Mjmp7b0X9/Q7kg2aifITbReckgvjcjZ/8orHwdGi5qm4jLDJoV",
+            'x-gorgon': "840440f41080c1f89eacdece36d9481df459ac26a0f9f1fd5beb",
+            'Cookie': "store-idc=alisg; store-country-code=iq; install_id=7516928038623151879; ttreq=1$5f3bc0fcb73296e39d74f6d161b1e2dfed2914e2; passport_csrf_token=0f2d2a82bd6027000f1cd87356a7c725; passport_csrf_token_default=0f2d2a82bd6027000f1cd87356a7c725; tt-target-idc=useast1a; msToken=QLxCStq-Kg2xmFBlVJujXSieGFaVkNNNlcpITZ64BrAHOpbQkFDLtCsUgkOeIvzAzVInDfq9kGli2Ez6hDV8fDvNPyVRPDn1ZBjswjNLB2w=; d_ticket=b5721737f5130c31a6838273ef8cce2bd033b; odin_tt=e5f3b0179d3ce2bf82dd4cc6f3390f77ccbad0b515cba639de5a239e6dcb9a73c2127a337a92a7aa97dba800b0ec2e428c03e1721d83e6c6a215ea2a1f9b685adb3489fac33fca47eee90e13b5aaa583; cmpl_token=AgQQAPPdF-ROXbF9U18up508_eMmwUgJv4csYN6Peg; sid_guard=9d6f2aba58cb9dbd28dc1e9db2ff355d%7C1750173049%7C15552000%7CSun%2C+14-Dec-2025+15%3A10%3A49+GMT; uid_tt=35618c1bd532338f95223c90d9e0761f882243bf9f8e6c3adac8e381d0de26a4; uid_tt_ss=35618c1bd532338f95223c90d9e0761f882243bf9f8e6c3adac8e381d0de26a4; sid_tt=9d6f2aba58cb9dbd28dc1e9db2ff355d; sessionid=ba9145164e3e0cf2ade170251307a327; sessionid_ss=9d6f2aba58cb9dbd28dc1e9db2ff355d; store-country-code-src=uid; tt-target-idc-sign=Vx96gYES8RTFDCY_PFVspKKHrqjQcO0VFxyGCL0tyyof1Gr54t8ljI3lt3Rm7jBD1DHO-vDAhN5HlanTZ0iGjnzaOPjqIGaQWSbjWaxnI92Y8WEsIuH10dKOVKlY5T8QpvH1_agORf6_CQoXrzJMg_hgKnWbTayMEr29jVGxnoEhJqHRItGbJ2oSpvgHH77jvQjIrgmRFF142K5MSJn7P-IUKVfhbF36EeJq1QzOOI0Ewr3wkCeNCH2juQUhnBiJA3m_U4OZD1EZrFWVUB8vC8yRzK63bgEKYwpkNU5zuKjV5DQwhWDh2iUL9-VLmmG-PJy4pEbtkIfsvMzuSCW3baFdQqgibSZkiNd59CNx0gf8hsX8gkaxxVv0_2E1ITwSsMI74t45MJX6k9YeBSWZU2NzRLShPCLSrD-KyEn0wld-hwaD0on1jb61XqRMPSi4G2nkIrC8oS0paVmf0ZhClcB41fhS0mUp8uDnY-3jKBx-7dUsu5S_2jEC4qXINWmw;store-country-sign=MEIEDNmFtblKy5x9QxT77AQgUNh27q2sLl-QbOIBLgB4xUEbZ2oboEtrtOqmBLYhhOwEEKF-pTVSphnhIiWj_Jt12X0"
         }
 
-        params = {'api': '1'}
-        data = {
-            'token': dynamic_token,
-            'timezone_offset': 'Asia/Baghdad',
-            'free_link': target_username,
+        self.base_payload = {
+            'pre_item_playtime': "",
+            'first_install_time': "1737204216",
+            'is_ad': "false",
+            'follow_status': "0",
+            'sync_origin': "false",
+            'follower_status': "0",
+            'action_time': "1750173135",
+            'tab_type': "3",
+            'pre_hot_sentence': "",
+            'play_delta': "1",
+            'request_id': "",
+            'aweme_type': "0",
+            'order': "",
+            'pre_item_id': ""
         }
 
-        response = session.post(
-            'https://leofame.com/free-instagram-story-views',
-            params=params,
-            headers=headers,
-            data=data,
-            proxies=proxy_dict,
-            timeout=10
-        ).text
+    def gen_dynamic_params(self):
+        return SignerPy.get(params={
+            "manifest_version_code": "350302",
+            "_rticket": str(int(random.random() * 10**16)),
+            "app_language": "en",
+            "app_type": "normal",
+            "iid": str(random.randint(7000000000000000000, 9000000000000000000)),
+            "channel": "googleplay",
+            "device_type": "RMX3941",
+            "language": "en",
+            "host_abi": "arm64-v8a",
+            "locale": "en",
+            "resolution": "1080*2290",
+            "openudid": str(uuid.uuid4().hex[:16]),
+            "update_version_code": "350302",
+            "ac2": "wifi5g",
+            "cdid": str(uuid.uuid4()),
+            "sys_region": "US",
+            "os_api": "34",
+            "timezone_name": "America/New_York",
+            "dpi": "480",
+            "carrier_region": "US",
+            "ac": "wifi",
+            "device_id": str(random.randint(7000000000000000000, 9000000000000000000)),
+            "os_version": "12",
+            "timezone_offset": "10800",
+            "version_code": "350302",
+            "app_name": "musically_go",
+            "ab_version": "35.3.2",
+            "version_name": "35.3.2",
+            "device_brand": "realme",
+            "op_region": "US",
+            "ssmix": "a",
+            "device_platform": "android",
+            "build_number": "35.3.2",
+            "region": "US",
+            "aid": "1340",
+            "ts": str(int(random.random() * 10**10))
+        })
 
-        if 'DONE' in response or '"success"' in response or 'success' in response.lower():
-            return True, "DONE"
-        else:
-            return False, response
-            
-    except Exception as ex:
-        return False, str(ex)
+    async def worker(self):
+        session = self.session
+        video_id = self.video_id
+        base_payload = self.base_payload.copy()
+        base_payload['item_id'] = video_id
+        api_url = self.API
+        
+        while self.is_running:
+            try:
+                payload = base_payload.copy()
+                async with session.post(
+                    api_url, 
+                    data=payload, 
+                    params=self.gen_dynamic_params()
+                ) as response:
+                    if response.status == 200:
+                        json_data = await response.json()
+                        if json_data.get('status_code') == 0:
+                            async with self.lock:
+                                self.counter += 1
+            except Exception:
+                continue
 
-# أدخل اليوزر
-username = st.text_input("Enter Your username =>", placeholder="أدخل اسم المستخدم هنا")
-
-if st.button("⚡ بدء الرشق عبر بروكسيات وأجهزة متعددة"):
-    if not username:
-        st.error("⚠️ يرجى إدخال اسم المستخدم أولاً!")
-    else:
-        status_box = st.empty()
-        log_box = st.empty()
-        
-        target = username.strip()
-        attempts = 0
-        success = False
-        
-        status_box.info("🚀 جاري بدء نظام المحاولات المتعددة والأجهزة المختلفة...")
-        
-        # حلقة تكرار بالخلفية مستمرة حتى ينجح الطلب 100%
-        while not success:
-            attempts += 1
-            log_box.info(f"🔄 محاولة رقم [{attempts}]: جاري تغيير الأي بي (IP) والجهاز وإرسال الطلب...")
-            
-            # تنفيذ المحاولات متوازية الخيوط (Multi-threading) لتسريع العملية
-            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-                futures = [executor.submit(send_story_request, target) for _ in range(3)]
+    async def start(self, counter_placeholder):
+        async with aiohttp.ClientSession() as temp_session:
+            try:
+                async with temp_session.get(self.url, allow_redirects=True) as response:
+                    full_url = str(response.url)
                 
-                for future in concurrent.futures.as_completed(futures):
-                    is_ok, res_text = future.result()
-                    if is_ok:
-                        success = True
-                        break
-            
-            if success:
-                status_box.empty()
-                log_box.empty()
-                st.success(f"🎉 DONE☑ - تم نجاح إرسال مشاهدات الستوري بعد {attempts} محاولة للحساب: {target}")
-                st.balloons()
-                break
-            else:
-                time.sleep(1)
+                match = VIDEO_ID_PATTERN.search(full_url)
+                if not match:
+                    st.error("⚠️ رابط الفيديو غير صحيح أو لم يتم العثور على id الفيديو!")
+                    return
+                    
+                self.video_id = match.group(1)
+                
+                connector = aiohttp.TCPConnector(
+                    limit=0,
+                    limit_per_host=0,
+                    ttl_dns_cache=300,
+                    enable_cleanup_closed=True,
+                    force_close=False
+                )
+                
+                timeout = aiohttp.ClientTimeout(total=10, connect=5, sock_read=5)
+                
+                async with aiohttp.ClientSession(
+                    connector=connector,
+                    timeout=timeout,
+                    headers=self.static_headers
+                ) as session:
+                    self.session = session
+                    tasks = [asyncio.create_task(self.worker()) for _ in range(self.threads)]
+                    
+                    # تحديث العداد بشكل حي ومباشر على واجهة المستخدم
+                    while self.is_running:
+                        await asyncio.sleep(0.3)
+                        counter_placeholder.markdown(f"""
+                        <div class="counter-display">
+                            <div style="color: #ff0055; font-size: 16px; font-weight: bold; margin-bottom: 5px;">⚡ العدد المرسل حالياً ⚡</div>
+                            <div class="counter-number">{self.counter:,}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+            except Exception as e:
+                st.error(f"حدث خطأ أثناء تشغيل الأداة: {e}")
+
+# 5. واجهة المدخلات والتحكم الخاصة بالمستخدم
+video_url = st.text_input("رابط الفيديو (TikTok URL):", placeholder="ضع رابط فيديو التيك توك هنا...")
+
+if "running" not in st.session_state:
+    st.session_state.running = False
+
+col1, col2 = st.columns(2)
+
+with col1:
+    start_btn = st.button("🚀 بدء إرسال المشاهدات")
+
+with col2:
+    stop_btn = st.button("🛑 إيقاف الإرسال")
+
+counter_spot = st.empty()
+
+if start_btn and video_url:
+    st.session_state.running = True
+    booster = StreamlitTikTokBooster(target_url=video_url.strip())
+    
+    # تشغيل عملية asyncio بدون حظر واجهة المستخدم
+    try:
+        asyncio.run(booster.start(counter_spot))
+    except Exception:
+        pass
+
+if stop_btn:
+    st.session_state.running = False
+    st.warning("تم إيقاف عملية الرشق!")
