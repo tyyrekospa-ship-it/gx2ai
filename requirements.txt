@@ -1,4 +1,4 @@
 streamlit
-requests
-user-agent
 aiohttp
+SignerPy
+
