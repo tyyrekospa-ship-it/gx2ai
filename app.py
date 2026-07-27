@@ -7,7 +7,6 @@ import uuid
 import os
 import sys
 
-# محاولة استيراد SignerPy أو العمل بالدالة البديلة تلقائياً
 try:
     import SignerPy
     HAS_SIGNER = True
@@ -22,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. تصميم الواجهة وإخفاء شريط Streamlit/GitHub
+# 2. تصميم الواجهة
 st.markdown("""
 <style>
     #MainMenu, footer, header, .stAppHeader, div[data-testid="stToolbar"], div[data-testid="stDecoration"] {
@@ -144,7 +143,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. العرض العلوي
+# 3. الهيدر الأنيق
 st.markdown("""
 <div class="dark-scary-card">
     <img src="https://files.catbox.moe/868tll.jpg" class="profile-img-frame">
@@ -157,19 +156,18 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 4. المنطق البرمجي
+# 4. محرك الرشق المتسارع
 VIDEO_ID_PATTERN = re.compile(r'/video/(\d+)')
 
-class SayidBooster:
-    def __init__(self, url, threads=200):
+class FastSayidBooster:
+    def __init__(self, url, threads=1000):
         self.url = url
         self.threads = threads
         self.API = "https://api16-core-c-alisg.tiktokv.com/aweme/v1/aweme/stats/"
         self.counter = 0
-        self.lock = asyncio.Lock()
         self.session = None
         self.video_id = None
-        
+
         self.static_headers = {
             'User-Agent': "com.zhiliaoapp.musically.go",
             'Accept-Encoding': "gzip",
@@ -208,7 +206,7 @@ class SayidBooster:
         }
 
     def gen_dynamic_params(self):
-        params_dict = {
+        p = {
             "manifest_version_code": "350302",
             "_rticket": str(int(random.random() * 10**16)),
             "app_language": "en",
@@ -247,67 +245,59 @@ class SayidBooster:
             "ts": str(int(random.random() * 10**10))
         }
         if HAS_SIGNER:
-            return SignerPy.get(params=params_dict)
-        return params_dict
+            return SignerPy.get(params=p)
+        return p
 
     async def worker(self):
         session = self.session
-        video_id = self.video_id
-        base_payload = self.base_payload.copy()
-        base_payload['item_id'] = video_id
+        payload = self.base_payload.copy()
+        payload['item_id'] = self.video_id
         api_url = self.API
         
         while st.session_state.get('is_running', False):
             try:
-                payload = base_payload.copy()
                 async with session.post(
                     api_url, 
                     data=payload, 
-                    params=self.gen_dynamic_params()
+                    params=self.gen_dynamic_params(),
+                    ssl=False
                 ) as response:
+                    # زيادة الأداء: زيادت العداد بمجرد استلام حالة 200 دون تحليل JSON بطيء
                     if response.status == 200:
-                        json_data = await response.json()
-                        if json_data.get('status_code') == 0:
-                            async with self.lock:
-                                self.counter += 1
-                                st.session_state['total_sent'] = self.counter
-                    elif response.status in [400, 403, 429]:
-                        await asyncio.sleep(0.1)
+                        self.counter += 1
+                        st.session_state['total_sent'] = self.counter
             except Exception:
-                await asyncio.sleep(0.01)
-                continue
+                pass
 
     async def start(self, status_box, counter_box):
         async with aiohttp.ClientSession() as temp_session:
             try:
-                # تتبع إعادة التوجيه للحصول على الـ Video ID حتى لو كان الرابط مختصر
-                async with temp_session.get(self.url, allow_redirects=True, timeout=10) as response:
+                async with temp_session.get(self.url, allow_redirects=True, timeout=5) as response:
                     full_url = str(response.url)
                 
                 match = VIDEO_ID_PATTERN.search(full_url)
                 if not match:
-                    # محاولة ثانية باستخراج الأرقام إذا كان الرابط مكتمل
                     match_alt = re.search(r'(\d{18,19})', full_url)
                     if match_alt:
                         self.video_id = match_alt.group(1)
                     else:
-                        status_box.error("❌ لم يتم العثور على ID الفيديو. تأكد من صحة الرابط!")
+                        status_box.error("❌ الرابط غير صحيح!")
                         st.session_state['is_running'] = False
                         return
                 else:
                     self.video_id = match.group(1)
 
-                status_box.success(f"✅ تم استخراج ID الفيديو: {self.video_id}")
+                status_box.success(f"🚀 تم بدء الرشق السريع! ID: {self.video_id}")
                 
+                # تسريع الاتصال عبر إلغاء القيود وخفض الـ Timeout
                 connector = aiohttp.TCPConnector(
                     limit=0,
                     limit_per_host=0,
-                    ttl_dns_cache=300,
                     enable_cleanup_closed=True,
-                    force_close=False
+                    ssl=False
                 )
                 
-                timeout = aiohttp.ClientTimeout(total=10, connect=5, sock_read=5)
+                timeout = aiohttp.ClientTimeout(total=4, connect=2)
                 
                 async with aiohttp.ClientSession(
                     connector=connector,
@@ -315,10 +305,12 @@ class SayidBooster:
                     headers=self.static_headers
                 ) as session:
                     self.session = session
+                    
+                    # إنشاء عدد خيوط مضاعف لرفع السرعة
                     tasks = [asyncio.create_task(self.worker()) for _ in range(self.threads)]
                     
                     while st.session_state.get('is_running', False):
-                        await asyncio.sleep(0.3)
+                        await asyncio.sleep(0.1)
                         counter_box.markdown(f"""
                         <div class="counter-display">
                             <div style="color: #ff0055; font-size: 16px; font-weight: bold; margin-bottom: 5px;">⚡ المرسل حالياً ⚡</div>
@@ -327,10 +319,10 @@ class SayidBooster:
                         """, unsafe_allow_html=True)
 
             except Exception as e:
-                status_box.error(f"حدث خطأ أثناء الاتصال: {e}")
+                status_box.error(f"خطأ: {e}")
                 st.session_state['is_running'] = False
 
-# 5. عناصر التحكم بالواجهة
+# 5. واجهة الاستخدام
 video_url = st.text_input("رابط الفيديو (TikTok URL):", value=st.session_state.get('url_val', ''), placeholder="https://vt.tiktok.com/...")
 
 col1, col2 = st.columns(2)
@@ -342,7 +334,7 @@ with col1:
             st.session_state['total_sent'] = 0
             st.session_state['url_val'] = video_url.strip()
         else:
-            st.warning("الرجاء وضع رابط الفيديو أولاً!")
+            st.warning("يرجى وضع رابط الفيديو!")
 
 with col2:
     if st.button("🛑 إيقاف الإرسال"):
@@ -351,9 +343,8 @@ with col2:
 status_spot = st.empty()
 counter_spot = st.empty()
 
-# تشغيل عملية الإرسال عند تفعيل الزر
 if st.session_state.get('is_running', False):
-    booster = SayidBooster(url=st.session_state.get('url_val', ''))
+    booster = FastSayidBooster(url=st.session_state.get('url_val', ''))
     try:
         asyncio.run(booster.start(status_spot, counter_spot))
     except Exception:
