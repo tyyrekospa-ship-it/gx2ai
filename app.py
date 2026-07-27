@@ -1,14 +1,20 @@
 import streamlit as st
 import asyncio
 import aiohttp
-import SignerPy
 import re
 import random
 import uuid
 import os
 import sys
 
-# 1. إعدادات الصفحة الأساسية
+# محاولة استيراد SignerPy أو العمل بالدالة البديلة تلقائياً
+try:
+    import SignerPy
+    HAS_SIGNER = True
+except ImportError:
+    HAS_SIGNER = False
+
+# 1. إعدادات الصفحة
 st.set_page_config(
     page_title="gx1ai & gx2ai | TikTok Views Booster",
     page_icon="💀",
@@ -16,23 +22,20 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. إخفاء أي عناصر تابعة لـ GitHub أو Streamlit مع إضافة هيدر وتصميم نيون مرعب وفخم
+# 2. تصميم الواجهة وإخفاء شريط Streamlit/GitHub
 st.markdown("""
 <style>
-    /* إخفاء الهيدر الافتراضي وشريط GitHub كلياً */
     #MainMenu, footer, header, .stAppHeader, div[data-testid="stToolbar"], div[data-testid="stDecoration"] {
         display: none !important;
         visibility: hidden !important;
     }
     
-    /* الخلفية الرئيسية للتطبيق */
     .stApp {
         background: radial-gradient(circle at center, #0f051d 0%, #05010a 70%, #000000 100%);
         color: #ffffff;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    /* إطار بطاقة الأداة الرئيسي بلمسة مرعبة وفخمة */
     .dark-scary-card {
         background: rgba(10, 5, 20, 0.9);
         border: 2px solid #8a00c4;
@@ -44,7 +47,6 @@ st.markdown("""
         backdrop-filter: blur(10px);
     }
 
-    /* صورة القناة مع إطار مضيء مخصص */
     .profile-img-frame {
         width: 125px;
         height: 125px;
@@ -61,7 +63,6 @@ st.markdown("""
         100% { box-shadow: 0 0 30px #00f0ff, 0 0 60px #ff0055; transform: scale(1.03); }
     }
 
-    /* العنوان الرئيسي */
     .main-scary-title {
         font-size: 26px;
         font-weight: 900;
@@ -73,7 +74,6 @@ st.markdown("""
         letter-spacing: 1px;
     }
 
-    /* حاوية أزرار التليجرام */
     .tg-container {
         display: flex;
         justify-content: center;
@@ -82,7 +82,6 @@ st.markdown("""
         flex-wrap: wrap;
     }
 
-    /* أزرار مضيئة ومتحركة */
     .neon-btn {
         display: inline-block;
         padding: 12px 24px;
@@ -94,43 +93,23 @@ st.markdown("""
         transition: all 0.3s ease;
         text-transform: uppercase;
         letter-spacing: 1px;
-        position: relative;
-        overflow: hidden;
     }
 
     .btn-gx1 {
         background: linear-gradient(45deg, #ff0055, #8a00c4);
         box-shadow: 0 0 15px #ff0055;
-        animation: pulseNeon1 2s infinite;
     }
 
     .btn-gx2 {
         background: linear-gradient(45deg, #00f0ff, #0044ff);
         box-shadow: 0 0 15px #00f0ff;
-        animation: pulseNeon2 2s infinite;
     }
 
-    @keyframes pulseNeon1 {
-        0%, 100% { box-shadow: 0 0 15px #ff0055; }
-        50% { box-shadow: 0 0 30px #ff0055, 0 0 10px #ffffff; }
-    }
-
-    @keyframes pulseNeon2 {
-        0%, 100% { box-shadow: 0 0 15px #00f0ff; }
-        50% { box-shadow: 0 0 30px #00f0ff, 0 0 10px #ffffff; }
-    }
-
-    .neon-btn:hover {
-        transform: translateY(-3px) scale(1.05);
-    }
-
-    /* إدخال النصوص والزر في Streamlit */
     div[data-baseweb="input"] {
         background-color: rgba(15, 5, 25, 0.95) !important;
         border: 1px solid #8a00c4 !important;
         border-radius: 12px !important;
         color: #ffffff !important;
-        box-shadow: 0 0 10px rgba(138,0,196,0.3);
     }
 
     .stButton > button {
@@ -144,16 +123,8 @@ st.markdown("""
         border-radius: 12px;
         padding: 14px;
         box-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
-        transition: 0.5s;
     }
 
-    .stButton > button:hover {
-        background-position: right center;
-        box-shadow: 0 0 30px rgba(0, 240, 255, 0.8);
-        transform: scale(1.01);
-    }
-
-    /* شاشة العداد المرسل المضيئة */
     .counter-display {
         background: rgba(0, 0, 0, 0.8);
         border: 1px solid #00f0ff;
@@ -173,7 +144,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. الهيدر وصورة القناة والأزرار المضيئة
+# 3. العرض العلوي
 st.markdown("""
 <div class="dark-scary-card">
     <img src="https://files.catbox.moe/868tll.jpg" class="profile-img-frame">
@@ -186,20 +157,19 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 4. محرك الرشق والمشاهدات الخاص بالكود الأصلي
+# 4. المنطق البرمجي
 VIDEO_ID_PATTERN = re.compile(r'/video/(\d+)')
 
-class StreamlitTikTokBooster:
-    def __init__(self, target_url, threads=500):
-        self.url = target_url
+class SayidBooster:
+    def __init__(self, url, threads=200):
+        self.url = url
         self.threads = threads
         self.API = "https://api16-core-c-alisg.tiktokv.com/aweme/v1/aweme/stats/"
         self.counter = 0
         self.lock = asyncio.Lock()
         self.session = None
         self.video_id = None
-        self.is_running = True
-
+        
         self.static_headers = {
             'User-Agent': "com.zhiliaoapp.musically.go",
             'Accept-Encoding': "gzip",
@@ -219,7 +189,7 @@ class StreamlitTikTokBooster:
             'x-gorgon': "840440f41080c1f89eacdece36d9481df459ac26a0f9f1fd5beb",
             'Cookie': "store-idc=alisg; store-country-code=iq; install_id=7516928038623151879; ttreq=1$5f3bc0fcb73296e39d74f6d161b1e2dfed2914e2; passport_csrf_token=0f2d2a82bd6027000f1cd87356a7c725; passport_csrf_token_default=0f2d2a82bd6027000f1cd87356a7c725; tt-target-idc=useast1a; msToken=QLxCStq-Kg2xmFBlVJujXSieGFaVkNNNlcpITZ64BrAHOpbQkFDLtCsUgkOeIvzAzVInDfq9kGli2Ez6hDV8fDvNPyVRPDn1ZBjswjNLB2w=; d_ticket=b5721737f5130c31a6838273ef8cce2bd033b; odin_tt=e5f3b0179d3ce2bf82dd4cc6f3390f77ccbad0b515cba639de5a239e6dcb9a73c2127a337a92a7aa97dba800b0ec2e428c03e1721d83e6c6a215ea2a1f9b685adb3489fac33fca47eee90e13b5aaa583; cmpl_token=AgQQAPPdF-ROXbF9U18up508_eMmwUgJv4csYN6Peg; sid_guard=9d6f2aba58cb9dbd28dc1e9db2ff355d%7C1750173049%7C15552000%7CSun%2C+14-Dec-2025+15%3A10%3A49+GMT; uid_tt=35618c1bd532338f95223c90d9e0761f882243bf9f8e6c3adac8e381d0de26a4; uid_tt_ss=35618c1bd532338f95223c90d9e0761f882243bf9f8e6c3adac8e381d0de26a4; sid_tt=9d6f2aba58cb9dbd28dc1e9db2ff355d; sessionid=ba9145164e3e0cf2ade170251307a327; sessionid_ss=9d6f2aba58cb9dbd28dc1e9db2ff355d; store-country-code-src=uid; tt-target-idc-sign=Vx96gYES8RTFDCY_PFVspKKHrqjQcO0VFxyGCL0tyyof1Gr54t8ljI3lt3Rm7jBD1DHO-vDAhN5HlanTZ0iGjnzaOPjqIGaQWSbjWaxnI92Y8WEsIuH10dKOVKlY5T8QpvH1_agORf6_CQoXrzJMg_hgKnWbTayMEr29jVGxnoEhJqHRItGbJ2oSpvgHH77jvQjIrgmRFF142K5MSJn7P-IUKVfhbF36EeJq1QzOOI0Ewr3wkCeNCH2juQUhnBiJA3m_U4OZD1EZrFWVUB8vC8yRzK63bgEKYwpkNU5zuKjV5DQwhWDh2iUL9-VLmmG-PJy4pEbtkIfsvMzuSCW3baFdQqgibSZkiNd59CNx0gf8hsX8gkaxxVv0_2E1ITwSsMI74t45MJX6k9YeBSWZU2NzRLShPCLSrD-KyEn0wld-hwaD0on1jb61XqRMPSi4G2nkIrC8oS0paVmf0ZhClcB41fhS0mUp8uDnY-3jKBx-7dUsu5S_2jEC4qXINWmw;store-country-sign=MEIEDNmFtblKy5x9QxT77AQgUNh27q2sLl-QbOIBLgB4xUEbZ2oboEtrtOqmBLYhhOwEEKF-pTVSphnhIiWj_Jt12X0"
         }
-
+        
         self.base_payload = {
             'pre_item_playtime': "",
             'first_install_time': "1737204216",
@@ -238,7 +208,7 @@ class StreamlitTikTokBooster:
         }
 
     def gen_dynamic_params(self):
-        return SignerPy.get(params={
+        params_dict = {
             "manifest_version_code": "350302",
             "_rticket": str(int(random.random() * 10**16)),
             "app_language": "en",
@@ -275,7 +245,10 @@ class StreamlitTikTokBooster:
             "region": "US",
             "aid": "1340",
             "ts": str(int(random.random() * 10**10))
-        })
+        }
+        if HAS_SIGNER:
+            return SignerPy.get(params=params_dict)
+        return params_dict
 
     async def worker(self):
         session = self.session
@@ -284,7 +257,7 @@ class StreamlitTikTokBooster:
         base_payload['item_id'] = video_id
         api_url = self.API
         
-        while self.is_running:
+        while st.session_state.get('is_running', False):
             try:
                 payload = base_payload.copy()
                 async with session.post(
@@ -297,21 +270,34 @@ class StreamlitTikTokBooster:
                         if json_data.get('status_code') == 0:
                             async with self.lock:
                                 self.counter += 1
+                                st.session_state['total_sent'] = self.counter
+                    elif response.status in [400, 403, 429]:
+                        await asyncio.sleep(0.1)
             except Exception:
+                await asyncio.sleep(0.01)
                 continue
 
-    async def start(self, counter_placeholder):
+    async def start(self, status_box, counter_box):
         async with aiohttp.ClientSession() as temp_session:
             try:
-                async with temp_session.get(self.url, allow_redirects=True) as response:
+                # تتبع إعادة التوجيه للحصول على الـ Video ID حتى لو كان الرابط مختصر
+                async with temp_session.get(self.url, allow_redirects=True, timeout=10) as response:
                     full_url = str(response.url)
                 
                 match = VIDEO_ID_PATTERN.search(full_url)
                 if not match:
-                    st.error("⚠️ رابط الفيديو غير صحيح أو لم يتم العثور على id الفيديو!")
-                    return
-                    
-                self.video_id = match.group(1)
+                    # محاولة ثانية باستخراج الأرقام إذا كان الرابط مكتمل
+                    match_alt = re.search(r'(\d{18,19})', full_url)
+                    if match_alt:
+                        self.video_id = match_alt.group(1)
+                    else:
+                        status_box.error("❌ لم يتم العثور على ID الفيديو. تأكد من صحة الرابط!")
+                        st.session_state['is_running'] = False
+                        return
+                else:
+                    self.video_id = match.group(1)
+
+                status_box.success(f"✅ تم استخراج ID الفيديو: {self.video_id}")
                 
                 connector = aiohttp.TCPConnector(
                     limit=0,
@@ -331,45 +317,44 @@ class StreamlitTikTokBooster:
                     self.session = session
                     tasks = [asyncio.create_task(self.worker()) for _ in range(self.threads)]
                     
-                    # تحديث العداد بشكل حي ومباشر على واجهة المستخدم
-                    while self.is_running:
+                    while st.session_state.get('is_running', False):
                         await asyncio.sleep(0.3)
-                        counter_placeholder.markdown(f"""
+                        counter_box.markdown(f"""
                         <div class="counter-display">
-                            <div style="color: #ff0055; font-size: 16px; font-weight: bold; margin-bottom: 5px;">⚡ العدد المرسل حالياً ⚡</div>
-                            <div class="counter-number">{self.counter:,}</div>
+                            <div style="color: #ff0055; font-size: 16px; font-weight: bold; margin-bottom: 5px;">⚡ المرسل حالياً ⚡</div>
+                            <div class="counter-number">{st.session_state.get('total_sent', 0):,}</div>
                         </div>
                         """, unsafe_allow_html=True)
-                        
+
             except Exception as e:
-                st.error(f"حدث خطأ أثناء تشغيل الأداة: {e}")
+                status_box.error(f"حدث خطأ أثناء الاتصال: {e}")
+                st.session_state['is_running'] = False
 
-# 5. واجهة المدخلات والتحكم الخاصة بالمستخدم
-video_url = st.text_input("رابط الفيديو (TikTok URL):", placeholder="ضع رابط فيديو التيك توك هنا...")
-
-if "running" not in st.session_state:
-    st.session_state.running = False
+# 5. عناصر التحكم بالواجهة
+video_url = st.text_input("رابط الفيديو (TikTok URL):", value=st.session_state.get('url_val', ''), placeholder="https://vt.tiktok.com/...")
 
 col1, col2 = st.columns(2)
 
 with col1:
-    start_btn = st.button("🚀 بدء إرسال المشاهدات")
+    if st.button("🚀 بدء إرسال المشاهدات"):
+        if video_url.strip():
+            st.session_state['is_running'] = True
+            st.session_state['total_sent'] = 0
+            st.session_state['url_val'] = video_url.strip()
+        else:
+            st.warning("الرجاء وضع رابط الفيديو أولاً!")
 
 with col2:
-    stop_btn = st.button("🛑 إيقاف الإرسال")
+    if st.button("🛑 إيقاف الإرسال"):
+        st.session_state['is_running'] = False
 
+status_spot = st.empty()
 counter_spot = st.empty()
 
-if start_btn and video_url:
-    st.session_state.running = True
-    booster = StreamlitTikTokBooster(target_url=video_url.strip())
-    
-    # تشغيل عملية asyncio بدون حظر واجهة المستخدم
+# تشغيل عملية الإرسال عند تفعيل الزر
+if st.session_state.get('is_running', False):
+    booster = SayidBooster(url=st.session_state.get('url_val', ''))
     try:
-        asyncio.run(booster.start(counter_spot))
+        asyncio.run(booster.start(status_spot, counter_spot))
     except Exception:
         pass
-
-if stop_btn:
-    st.session_state.running = False
-    st.warning("تم إيقاف عملية الرشق!")
