@@ -5,7 +5,7 @@ from user_agent import generate_user_agent
 # إعدادات الصفحة
 st.set_page_config(
     page_title="زيادة مشاهدات ستوري - gx1ai & gx2ai",
-    page_icon="🚀",
+    page_icon="",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
@@ -89,16 +89,16 @@ st.markdown("""
 <div class="main-card">
     <img src="https://files.catbox.moe/868tll.jpg" class="channel-logo-img">
     <div class="main-title">🚀 أداة زيادة مشاهدات ستوري انستغرام</div>
-    <div style="color: #8d99ae; font-size: 14px; margin-bottom: 15px;">إرسال مشاهدات الستوري المباشرة والسريعة</div>
+    <div style="color: #8d99ae; font-size: 14px; margin-bottom: 15px;">مشاهدات استوري انستكرام الى اي حساب عن طريق اليوزر</div>
     <div>
-        <a href="https://t.me/gx1ai" target="_blank" class="telegram-btn">✈️ قناة gx1ai</a>
-        <a href="https://t.me/gx2ai" target="_blank" class="telegram-btn">✈️ قناة gx2ai</a>
+        <a href="https://t.me/gx1ai" target="_blank" class="telegram-btn"> قناة 1 gx1ai</a>
+        <a href="https://t.me/gx2ai" target="_blank" class="telegram-btn"> قناة 2 gx2ai</a>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # إدخال اليوزر
-username = st.text_input("يوزر الحساب (Username):", placeholder="أدخل اسم المستخدم بدون @")
+username = st.text_input("يوزر الحساب (Username):", placeholder="أدخل اسم المستخدم")
 
 if st.button("⚡ بدء إرسال مشاهدات الستوري"):
     if not username:
