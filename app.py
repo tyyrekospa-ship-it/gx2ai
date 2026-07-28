@@ -4,10 +4,10 @@ import random
 import time
 from uuid import uuid4
 
-# إعدادات الصفحة
+# إعدادات الصفحة (تم تصحيح الخطأ هنا)
 st.set_page_config(
     page_title="MIKHAEL Hunter",
-    page_page_icon="👑",
+    page_icon="👑",
     layout="centered"
 )
 
@@ -36,7 +36,7 @@ st.markdown("""
         height: 3em;
     }
 </style>
-""", unsafe_allow_dict_replace=True)
+""", unsafe_allow_html=True)
 
 st.markdown('<div class="main-title">❖ MIKHAEL HUNTER 👑</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">تطبيق فحص وتخمين يوزرات انستغرام بأحدث الأنماط</div>', unsafe_allow_html=True)
@@ -127,7 +127,6 @@ start_button = st.button("🚀 بدء الصيد والتخمين")
 
 if start_button:
     st.info("جاري الفحص الآن...")
-    stop_button = st.button("🛑 إيقاف")
     
     while True:
         user = generate_username(pattern)
