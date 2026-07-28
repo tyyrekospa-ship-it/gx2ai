@@ -14,7 +14,7 @@ try:
 except ImportError:
     HAS_SIGNER = False
 
-# 1. إعدادات الصفحة
+# 1. إعدادات وتصميم الواجهة (لتشبه ستايل أداة بايثون وتبقى احترافية)
 st.set_page_config(
     page_title="gx1ai & gx2ai | TikTok Views Booster",
     page_icon="💀",
@@ -22,7 +22,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. تصميم الواجهة وإخفاء شريط Streamlit/GitHub
 st.markdown("""
 <style>
     #MainMenu, footer, header, .stAppHeader, div[data-testid="stToolbar"], div[data-testid="stDecoration"] {
@@ -64,7 +63,7 @@ st.markdown("""
     }
 
     .main-scary-title {
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 900;
         background: linear-gradient(90deg, #ff0055, #00f0ff, #ff0055);
         -webkit-background-clip: text;
@@ -84,9 +83,9 @@ st.markdown("""
 
     .neon-btn {
         display: inline-block;
-        padding: 12px 24px;
+        padding: 10px 20px;
         font-weight: bold;
-        font-size: 15px;
+        font-size: 14px;
         color: #fff !important;
         text-decoration: none !important;
         border-radius: 50px;
@@ -105,13 +104,6 @@ st.markdown("""
         box-shadow: 0 0 15px #00f0ff;
     }
 
-    div[data-baseweb="input"] {
-        background-color: rgba(15, 5, 25, 0.95) !important;
-        border: 1px solid #8a00c4 !important;
-        border-radius: 12px !important;
-        color: #ffffff !important;
-    }
-
     .stButton > button {
         width: 100%;
         background: linear-gradient(90deg, #ff0055 0%, #8a00c4 50%, #00f0ff 100%);
@@ -125,31 +117,26 @@ st.markdown("""
         box-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
     }
 
-    .counter-display {
-        background: rgba(0, 0, 0, 0.8);
-        border: 1px solid #00f0ff;
-        border-radius: 15px;
-        padding: 20px;
+    .speed-badge {
+        background: #0000ff;
+        color: #ffcc00;
+        padding: 15px;
+        border-radius: 12px;
+        font-size: 24px;
+        font-weight: bold;
         text-align: center;
+        border: 1px solid #00f0ff;
+        box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
         margin-top: 20px;
-        box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
-    }
-
-    .counter-number {
-        font-size: 42px;
-        font-weight: 900;
-        color: #00f0ff;
-        text-shadow: 0 0 15px #00f0ff, 0 0 30px #00f0ff;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. العرض العلوي
+# واجهة الهيدر
 st.markdown("""
 <div class="dark-scary-card">
     <img src="https://files.catbox.moe/868tll.jpg" class="profile-img-frame">
-    <div class="main-scary-title">🔥 أداة زيادة مشاهدات تيك توك الفائقة 🔥</div>
-    <div style="color: #b8b8b8; font-size: 14px; margin-bottom: 10px;">نظام الرشق التلقائي السريع والمعزز</div>
+    <div class="main-scary-title">🔥 رشق مشاهدات تيك توك (نفس كود بايثون) 🔥</div>
     <div class="tg-container">
         <a href="https://t.me/gx1ai" target="_blank" class="neon-btn btn-gx1">⚡ قناة gx1ai</a>
         <a href="https://t.me/gx2ai" target="_blank" class="neon-btn btn-gx2">🚀 قناة gx2ai</a>
@@ -157,13 +144,13 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 4. المنطق البرمجي
+# 2. كلاس Sayid الخاص بك (نفس المنطق والسرعة)
 VIDEO_ID_PATTERN = re.compile(r'/video/(\d+)')
 
-class SayidBooster:
-    def __init__(self, url, threads=200):
+class SayidWeb:
+    def __init__(self, url):
         self.url = url
-        self.threads = threads
+        self.threads = 500  # نفس عدد الـ threads في الكود الأصلي
         self.API = "https://api16-core-c-alisg.tiktokv.com/aweme/v1/aweme/stats/"
         self.counter = 0
         self.lock = asyncio.Lock()
@@ -206,6 +193,53 @@ class SayidBooster:
             'order': "",
             'pre_item_id': ""
         }
+
+    async def main_run(self, status_box, counter_box):
+        async with aiohttp.ClientSession() as temp_session:
+            try:
+                async with temp_session.get(self.url, allow_redirects=True) as response:
+                    full_url = str(response.url)
+                
+                match = VIDEO_ID_PATTERN.search(full_url)
+                if not match:
+                    status_box.error("❌ رابط غير صالح أو لم يتم العثور على video_id")
+                    st.session_state['is_running'] = False
+                    return
+                    
+                self.video_id = match.group(1)
+                status_box.success(f"✅ تم جلب الـ ID بنجاح: {self.video_id}")
+                
+                connector = aiohttp.TCPConnector(
+                    limit=0,
+                    limit_per_host=0,
+                    ttl_dns_cache=300,
+                    enable_cleanup_closed=True,
+                    force_close=False
+                )
+                
+                timeout = aiohttp.ClientTimeout(total=10, connect=5, sock_read=5)
+                
+                async with aiohttp.ClientSession(
+                    connector=connector,
+                    timeout=timeout,
+                    headers=self.static_headers
+                ) as session:
+                    self.session = session
+                    
+                    tasks = [asyncio.create_task(self.worker()) for _ in range(self.threads)]
+                    
+                    # حلقة مراقبة العداد وتحديثه في واجهة المستخدم بانتظام وسرعة عالية
+                    while st.session_state.get('is_running', False):
+                        await asyncio.sleep(0.1)
+                        counter_box.markdown(f"""
+                        <div class="speed-badge">
+                             {self.counter} : الـسـرعة ⚡
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+            except Exception as e:
+                status_box.error(f"Error > {e}")
+                st.session_state['is_running'] = False
 
     def gen_dynamic_params(self):
         params_dict = {
@@ -270,92 +304,32 @@ class SayidBooster:
                         if json_data.get('status_code') == 0:
                             async with self.lock:
                                 self.counter += 1
-                                st.session_state['total_sent'] = self.counter
-                    elif response.status in [400, 403, 429]:
-                        await asyncio.sleep(0.1)
-            except Exception:
-                await asyncio.sleep(0.01)
+            except (asyncio.TimeoutError, aiohttp.ClientError, Exception):
                 continue
 
-    async def start(self, status_box, counter_box):
-        async with aiohttp.ClientSession() as temp_session:
-            try:
-                # تتبع إعادة التوجيه للحصول على الـ Video ID حتى لو كان الرابط مختصر
-                async with temp_session.get(self.url, allow_redirects=True, timeout=10) as response:
-                    full_url = str(response.url)
-                
-                match = VIDEO_ID_PATTERN.search(full_url)
-                if not match:
-                    # محاولة ثانية باستخراج الأرقام إذا كان الرابط مكتمل
-                    match_alt = re.search(r'(\d{18,19})', full_url)
-                    if match_alt:
-                        self.video_id = match_alt.group(1)
-                    else:
-                        status_box.error("❌ لم يتم العثور على ID الفيديو. تأكد من صحة الرابط!")
-                        st.session_state['is_running'] = False
-                        return
-                else:
-                    self.video_id = match.group(1)
-
-                status_box.success(f"✅ تم استخراج ID الفيديو: {self.video_id}")
-                
-                connector = aiohttp.TCPConnector(
-                    limit=0,
-                    limit_per_host=0,
-                    ttl_dns_cache=300,
-                    enable_cleanup_closed=True,
-                    force_close=False
-                )
-                
-                timeout = aiohttp.ClientTimeout(total=10, connect=5, sock_read=5)
-                
-                async with aiohttp.ClientSession(
-                    connector=connector,
-                    timeout=timeout,
-                    headers=self.static_headers
-                ) as session:
-                    self.session = session
-                    tasks = [asyncio.create_task(self.worker()) for _ in range(self.threads)]
-                    
-                    while st.session_state.get('is_running', False):
-                        await asyncio.sleep(0.3)
-                        counter_box.markdown(f"""
-                        <div class="counter-display">
-                            <div style="color: #ff0055; font-size: 16px; font-weight: bold; margin-bottom: 5px;">⚡ المرسل حالياً ⚡</div>
-                            <div class="counter-number">{st.session_state.get('total_sent', 0):,}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-            except Exception as e:
-                status_box.error(f"حدث خطأ أثناء الاتصال: {e}")
-                st.session_state['is_running'] = False
-
-# 5. عناصر التحكم بالواجهة
-video_url = st.text_input("رابط الفيديو (TikTok URL):", value=st.session_state.get('url_val', ''), placeholder="https://vt.tiktok.com/...")
+# 3. واجهة الإدخال والتحكم
+url_input = st.text_input("رابطـ الفيـديو (URL):", value=st.session_state.get('url_input', ''), placeholder="ضع رابط التيك توك هنا...")
 
 col1, col2 = st.columns(2)
-
 with col1:
-    if st.button("🚀 بدء إرسال المشاهدات"):
-        if video_url.strip():
+    if st.button("🚀 بدء الرشق الفائق"):
+        if url_input.strip():
             st.session_state['is_running'] = True
-            st.session_state['total_sent'] = 0
-            st.session_state['url_val'] = video_url.strip()
+            st.session_state['url_input'] = url_input.strip()
         else:
-            st.warning("الرجاء وضع رابط الفيديو أولاً!")
+            st.warning("الرجاء إدخال الرابط أولاً!")
 
 with col2:
-    if st.button("🛑 إيقاف الإرسال"):
+    if st.button("🛑 إيقاف الرشق"):
         st.session_state['is_running'] = False
 
-status_spot = st.empty()
-counter_spot = st.empty()
+status_placeholder = st.empty()
+counter_placeholder = st.empty()
 
-# تشغيل عملية الإرسال عند تفعيل الزر
+# التشغيل الفعلي عبر Asyncio عند تفعيل الزر
 if st.session_state.get('is_running', False):
-    booster = SayidBooster(url=st.session_state.get('url_val', ''))
+    bot = SayidWeb(url=st.session_state.get('url_input', ''))
     try:
-        asyncio.run(booster.start(status_spot, counter_spot))
+        asyncio.run(bot.main_run(status_placeholder, counter_placeholder))
     except Exception:
         pass
-
