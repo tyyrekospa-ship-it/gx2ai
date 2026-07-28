@@ -1,335 +1,153 @@
 import streamlit as st
-import asyncio
-import aiohttp
-import re
+import requests
 import random
-import uuid
-import os
-import sys
+import time
+from uuid import uuid4
 
-# محاولة استيراد SignerPy أو العمل بالدالة البديلة تلقائياً
-try:
-    import SignerPy
-    HAS_SIGNER = True
-except ImportError:
-    HAS_SIGNER = False
-
-# 1. إعدادات وتصميم الواجهة (لتشبه ستايل أداة بايثون وتبقى احترافية)
+# إعدادات الصفحة
 st.set_page_config(
-    page_title="gx1ai & gx2ai | TikTok Views Booster",
-    page_icon="💀",
-    layout="centered",
-    initial_sidebar_state="collapsed"
+    page_title="MIKHAEL Hunter",
+    page_page_icon="👑",
+    layout="centered"
 )
 
+# تصميم واجهة فخمة باستخدام CSS
 st.markdown("""
 <style>
-    #MainMenu, footer, header, .stAppHeader, div[data-testid="stToolbar"], div[data-testid="stDecoration"] {
-        display: none !important;
-        visibility: hidden !important;
-    }
-    
-    .stApp {
-        background: radial-gradient(circle at center, #0f051d 0%, #05010a 70%, #000000 100%);
-        color: #ffffff;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    .dark-scary-card {
-        background: rgba(10, 5, 20, 0.9);
-        border: 2px solid #8a00c4;
-        border-radius: 25px;
-        padding: 30px 20px;
-        box-shadow: 0 0 35px rgba(138, 0, 196, 0.5), inset 0 0 15px rgba(255, 0, 85, 0.3);
+    .main-title {
         text-align: center;
-        margin-bottom: 25px;
-        backdrop-filter: blur(10px);
-    }
-
-    .profile-img-frame {
-        width: 125px;
-        height: 125px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid #ff0055;
-        box-shadow: 0 0 25px #ff0055, 0 0 50px #8a00c4;
-        margin-bottom: 15px;
-        animation: scaryGlow 3s infinite alternate;
-    }
-
-    @keyframes scaryGlow {
-        0% { box-shadow: 0 0 15px #ff0055, 0 0 30px #8a00c4; transform: scale(1); }
-        100% { box-shadow: 0 0 30px #00f0ff, 0 0 60px #ff0055; transform: scale(1.03); }
-    }
-
-    .main-scary-title {
-        font-size: 24px;
-        font-weight: 900;
-        background: linear-gradient(90deg, #ff0055, #00f0ff, #ff0055);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0 0 10px rgba(255,0,85,0.5);
-        margin-bottom: 15px;
-        letter-spacing: 1px;
-    }
-
-    .tg-container {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-        margin-top: 15px;
-        flex-wrap: wrap;
-    }
-
-    .neon-btn {
-        display: inline-block;
-        padding: 10px 20px;
+        color: #FF4B4B;
+        font-size: 2.5rem;
         font-weight: bold;
-        font-size: 14px;
-        color: #fff !important;
-        text-decoration: none !important;
-        border-radius: 50px;
-        transition: all 0.3s ease;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        margin-bottom: 0px;
     }
-
-    .btn-gx1 {
-        background: linear-gradient(45deg, #ff0055, #8a00c4);
-        box-shadow: 0 0 15px #ff0055;
+    .sub-title {
+        text-align: center;
+        color: #888;
+        font-size: 1.1rem;
+        margin-bottom: 25px;
     }
-
-    .btn-gx2 {
-        background: linear-gradient(45deg, #00f0ff, #0044ff);
-        box-shadow: 0 0 15px #00f0ff;
-    }
-
-    .stButton > button {
+    .stButton>button {
         width: 100%;
-        background: linear-gradient(90deg, #ff0055 0%, #8a00c4 50%, #00f0ff 100%);
-        background-size: 200% auto;
+        background-color: #FF4B4B;
         color: white;
         font-weight: bold;
-        font-size: 18px;
-        border: none;
-        border-radius: 12px;
-        padding: 14px;
-        box-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
-    }
-
-    .speed-badge {
-        background: #0000ff;
-        color: #ffcc00;
-        padding: 15px;
-        border-radius: 12px;
-        font-size: 24px;
-        font-weight: bold;
-        text-align: center;
-        border: 1px solid #00f0ff;
-        box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
-        margin-top: 20px;
+        border-radius: 8px;
+        height: 3em;
     }
 </style>
-""", unsafe_allow_html=True)
+""", unsafe_allow_dict_replace=True)
 
-# واجهة الهيدر
-st.markdown("""
-<div class="dark-scary-card">
-    <img src="https://files.catbox.moe/868tll.jpg" class="profile-img-frame">
-    <div class="main-scary-title">🔥 رشق مشاهدات تيك توك (نفس كود بايثون) 🔥</div>
-    <div class="tg-container">
-        <a href="https://t.me/gx1ai" target="_blank" class="neon-btn btn-gx1">⚡ قناة gx1ai</a>
-        <a href="https://t.me/gx2ai" target="_blank" class="neon-btn btn-gx2">🚀 قناة gx2ai</a>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+st.markdown('<div class="main-title">❖ MIKHAEL HUNTER 👑</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">تطبيق فحص وتخمين يوزرات انستغرام بأحدث الأنماط</div>', unsafe_allow_html=True)
 
-# 2. كلاس Sayid الخاص بك (نفس المنطق والسرعة)
-VIDEO_ID_PATTERN = re.compile(r'/video/(\d+)')
+# إعداد الجلسات لحفظ الإحصائيات
+if 'hits' not in st.session_state:
+    st.session_state.hits = 0
+if 'bad' not in st.session_state:
+    st.session_state.bad = 0
+if 'found_users' not in st.session_state:
+    st.session_state.found_users = []
 
-class SayidWeb:
-    def __init__(self, url):
-        self.url = url
-        self.threads = 500  # نفس عدد الـ threads في الكود الأصلي
-        self.API = "https://api16-core-c-alisg.tiktokv.com/aweme/v1/aweme/stats/"
-        self.counter = 0
-        self.lock = asyncio.Lock()
-        self.session = None
-        self.video_id = None
-        
-        self.static_headers = {
-            'User-Agent': "com.zhiliaoapp.musically.go",
-            'Accept-Encoding': "gzip",
-            'rpc-persist-pyxis-policy-v-tnc': "1",
-            'x-ss-stub': "80867B02FBD2ECA6BA9AA62239D3B1EB",
-            'x-tt-req-timeout': "90000",
-            'sdk-version': "2",
-            'x-tt-token': "039d6f2aba58cb9dbd28dc1e9db2ff355d0291bae03464a6c3fb0cc8df9871bf4f74a8e386c55b5d805c496a78fcf838ff309b97885ecb4cda244e6997aee72f64ba2b61de022e0e9df57f2298a47798ed0b6c9f4d495c56793fbb658044dcc3e3008--0a4e0a201266a032bd35419f3b5dde919e4745ca32b784b956a1d2ee19e5ec79d874f2281220eae667e86a053d169b45d4a44a6dd914e846c78bff2f80647b899c3a1902284d1801220674696b746f6b-3.0.0",
-            'passport-sdk-version': "30990",
-            'x-tt-ultra-lite': "1",
-            'x-vc-bdturing-sdk-version': "2.3.2.i18n",
-            'x-tt-store-region': "iq",
-            'x-tt-store-region-src': "uid",
-            'x-ladon': "abrYTrssSD1CwVlPF9RDXSuywcMgvDEm9png1gwUFF22S8v9",
-            'x-khronos': "1750173135",
-            'x-argus': "tQMfoeL2aSF5jwjvAyYZVA9PuLLbYe73yEdyRXTe2Vd860DTV5P4vgO0DJN0qp/Ys+Slb2Bb79+s++ppBCSZTT5mzL6KB/irb13VhiIpNf7dz/AQUXdtR5yTTKEIivnl9q+jDOJMkSDE9D2+4zW/PrOKqhprYwjUD1NetyG1Oam38wp/fJekNB75vLYTc9Xj4uHiJVuGuCKoUCM2YLi0sBp2mVGfMkPpgdn5f8Mjmp7b0X9/Q7kg2aifITbReckgvjcjZ/8orHwdGi5qm4jLDJoV",
-            'x-gorgon': "840440f41080c1f89eacdece36d9481df459ac26a0f9f1fd5beb",
-            'Cookie': "store-idc=alisg; store-country-code=iq; install_id=7516928038623151879; ttreq=1$5f3bc0fcb73296e39d74f6d161b1e2dfed2914e2; passport_csrf_token=0f2d2a82bd6027000f1cd87356a7c725; passport_csrf_token_default=0f2d2a82bd6027000f1cd87356a7c725; tt-target-idc=useast1a; msToken=QLxCStq-Kg2xmFBlVJujXSieGFaVkNNNlcpITZ64BrAHOpbQkFDLtCsUgkOeIvzAzVInDfq9kGli2Ez6hDV8fDvNPyVRPDn1ZBjswjNLB2w=; d_ticket=b5721737f5130c31a6838273ef8cce2bd033b; odin_tt=e5f3b0179d3ce2bf82dd4cc6f3390f77ccbad0b515cba639de5a239e6dcb9a73c2127a337a92a7aa97dba800b0ec2e428c03e1721d83e6c6a215ea2a1f9b685adb3489fac33fca47eee90e13b5aaa583; cmpl_token=AgQQAPPdF-ROXbF9U18up508_eMmwUgJv4csYN6Peg; sid_guard=9d6f2aba58cb9dbd28dc1e9db2ff355d%7C1750173049%7C15552000%7CSun%2C+14-Dec-2025+15%3A10%3A49+GMT; uid_tt=35618c1bd532338f95223c90d9e0761f882243bf9f8e6c3adac8e381d0de26a4; uid_tt_ss=35618c1bd532338f95223c90d9e0761f882243bf9f8e6c3adac8e381d0de26a4; sid_tt=9d6f2aba58cb9dbd28dc1e9db2ff355d; sessionid=ba9145164e3e0cf2ade170251307a327; sessionid_ss=9d6f2aba58cb9dbd28dc1e9db2ff355d; store-country-code-src=uid; tt-target-idc-sign=Vx96gYES8RTFDCY_PFVspKKHrqjQcO0VFxyGCL0tyyof1Gr54t8ljI3lt3Rm7jBD1DHO-vDAhN5HlanTZ0iGjnzaOPjqIGaQWSbjWaxnI92Y8WEsIuH10dKOVKlY5T8QpvH1_agORf6_CQoXrzJMg_hgKnWbTayMEr29jVGxnoEhJqHRItGbJ2oSpvgHH77jvQjIrgmRFF142K5MSJn7P-IUKVfhbF36EeJq1QzOOI0Ewr3wkCeNCH2juQUhnBiJA3m_U4OZD1EZrFWVUB8vC8yRzK63bgEKYwpkNU5zuKjV5DQwhWDh2iUL9-VLmmG-PJy4pEbtkIfsvMzuSCW3baFdQqgibSZkiNd59CNx0gf8hsX8gkaxxVv0_2E1ITwSsMI74t45MJX6k9YeBSWZU2NzRLShPCLSrD-KyEn0wld-hwaD0on1jb61XqRMPSi4G2nkIrC8oS0paVmf0ZhClcB41fhS0mUp8uDnY-3jKBx-7dUsu5S_2jEC4qXINWmw;store-country-sign=MEIEDNmFtblKy5x9QxT77AQgUNh27q2sLl-QbOIBLgB4xUEbZ2oboEtrtOqmBLYhhOwEEKF-pTVSphnhIiWj_Jt12X0"
-        }
-        
-        self.base_payload = {
-            'pre_item_playtime': "",
-            'first_install_time': "1737204216",
-            'is_ad': "false",
-            'follow_status': "0",
-            'sync_origin': "false",
-            'follower_status': "0",
-            'action_time': "1750173135",
-            'tab_type': "3",
-            'pre_hot_sentence': "",
-            'play_delta': "1",
-            'request_id': "",
-            'aweme_type': "0",
-            'order': "",
-            'pre_item_id': ""
-        }
+# الأحرف المسموحة فقط والأرقام
+letters = 'asfjlioprtvcxznv'
+digits = '0123456789'
 
-    async def main_run(self, status_box, counter_box):
-        async with aiohttp.ClientSession() as temp_session:
-            try:
-                async with temp_session.get(self.url, allow_redirects=True) as response:
-                    full_url = str(response.url)
-                
-                match = VIDEO_ID_PATTERN.search(full_url)
-                if not match:
-                    status_box.error("❌ رابط غير صالح أو لم يتم العثور على video_id")
-                    st.session_state['is_running'] = False
-                    return
-                    
-                self.video_id = match.group(1)
-                status_box.success(f"✅ تم جلب الـ ID بنجاح: {self.video_id}")
-                
-                connector = aiohttp.TCPConnector(
-                    limit=0,
-                    limit_per_host=0,
-                    ttl_dns_cache=300,
-                    enable_cleanup_closed=True,
-                    force_close=False
-                )
-                
-                timeout = aiohttp.ClientTimeout(total=10, connect=5, sock_read=5)
-                
-                async with aiohttp.ClientSession(
-                    connector=connector,
-                    timeout=timeout,
-                    headers=self.static_headers
-                ) as session:
-                    self.session = session
-                    
-                    tasks = [asyncio.create_task(self.worker()) for _ in range(self.threads)]
-                    
-                    # حلقة مراقبة العداد وتحديثه في واجهة المستخدم بانتظام وسرعة عالية
-                    while st.session_state.get('is_running', False):
-                        await asyncio.sleep(0.1)
-                        counter_box.markdown(f"""
-                        <div class="speed-badge">
-                             {self.counter} : الـسـرعة ⚡
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-            except Exception as e:
-                status_box.error(f"Error > {e}")
-                st.session_state['is_running'] = False
-
-    def gen_dynamic_params(self):
-        params_dict = {
-            "manifest_version_code": "350302",
-            "_rticket": str(int(random.random() * 10**16)),
-            "app_language": "en",
-            "app_type": "normal",
-            "iid": str(random.randint(7000000000000000000, 9000000000000000000)),
-            "channel": "googleplay",
-            "device_type": "RMX3941",
-            "language": "en",
-            "host_abi": "arm64-v8a",
-            "locale": "en",
-            "resolution": "1080*2290",
-            "openudid": str(uuid.uuid4().hex[:16]),
-            "update_version_code": "350302",
-            "ac2": "wifi5g",
-            "cdid": str(uuid.uuid4()),
-            "sys_region": "US",
-            "os_api": "34",
-            "timezone_name": "America/New_York",
-            "dpi": "480",
-            "carrier_region": "US",
-            "ac": "wifi",
-            "device_id": str(random.randint(7000000000000000000, 9000000000000000000)),
-            "os_version": "12",
-            "timezone_offset": "10800",
-            "version_code": "350302",
-            "app_name": "musically_go",
-            "ab_version": "35.3.2",
-            "version_name": "35.3.2",
-            "device_brand": "realme",
-            "op_region": "US",
-            "ssmix": "a",
-            "device_platform": "android",
-            "build_number": "35.3.2",
-            "region": "US",
-            "aid": "1340",
-            "ts": str(int(random.random() * 10**10))
-        }
-        if HAS_SIGNER:
-            return SignerPy.get(params=params_dict)
-        return params_dict
-
-    async def worker(self):
-        session = self.session
-        video_id = self.video_id
-        base_payload = self.base_payload.copy()
-        base_payload['item_id'] = video_id
-        api_url = self.API
-        
-        while st.session_state.get('is_running', False):
-            try:
-                payload = base_payload.copy()
-                async with session.post(
-                    api_url, 
-                    data=payload, 
-                    params=self.gen_dynamic_params()
-                ) as response:
-                    if response.status == 200:
-                        json_data = await response.json()
-                        if json_data.get('status_code') == 0:
-                            async with self.lock:
-                                self.counter += 1
-            except (asyncio.TimeoutError, aiohttp.ClientError, Exception):
-                continue
-
-# 3. واجهة الإدخال والتحكم
-url_input = st.text_input("رابطـ الفيـديو (URL):", value=st.session_state.get('url_input', ''), placeholder="ضع رابط التيك توك هنا...")
-
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("🚀 بدء الرشق الفائق"):
-        if url_input.strip():
-            st.session_state['is_running'] = True
-            st.session_state['url_input'] = url_input.strip()
+def generate_username(pattern_choice):
+    if pattern_choice == 1:
+        # نمط a.ss1 (حرف . حرف حرف رقم)
+        return f"{random.choice(letters)}.{random.choice(letters)}{random.choice(letters)}{random.choice(digits)}"
+    elif pattern_choice == 2:
+        # نمط s.uio (حرف . 3 أحرف)
+        return f"{random.choice(letters)}.{random.choice(letters)}{random.choice(letters)}{random.choice(letters)}"
+    else:
+        # خليط عشوائي
+        if random.choice([True, False]):
+            return f"{random.choice(letters)}.{random.choice(letters)}{random.choice(letters)}{random.choice(digits)}"
         else:
-            st.warning("الرجاء إدخال الرابط أولاً!")
+            return f"{random.choice(letters)}.{random.choice(letters)}{random.choice(letters)}{random.choice(letters)}"
 
-with col2:
-    if st.button("🛑 إيقاف الرشق"):
-        st.session_state['is_running'] = False
-
-status_placeholder = st.empty()
-counter_placeholder = st.empty()
-
-# التشغيل الفعلي عبر Asyncio عند تفعيل الزر
-if st.session_state.get('is_running', False):
-    bot = SayidWeb(url=st.session_state.get('url_input', ''))
+def check_username(user):
+    url = 'https://i.instagram.com/api/v1/accounts/create/'
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'Host': 'i.instagram.com',
+        'User-Agent': 'Instagram 6.12.1 Android (30/11; 480dpi; 1080x2298; HONOR; ANY-LX2; HNANY-Q1; qcom; en_IQ)',
+        'Cookie': 'mid=Y16iBgABAAFggfUYwajggkGFz-hs',
+        'Accept-Language': 'en-IQ, en-US',
+    }
+    data = {
+        "email": f"test_{random.randint(1000,9999)}@gmail.com",
+        "username": user,
+        "password": "Password123@" + user,
+        "device_id": "android-" + str(uuid4()),
+        "guid": str(uuid4()),
+    }
     try:
-        asyncio.run(bot.main_run(status_placeholder, counter_placeholder))
-    except Exception:
-        pass
+        res = requests.post(url, headers=headers, data=data, timeout=7)
+        if 'email_is_taken' in res.text:
+            return True # متاح
+        elif 'username' in res.text:
+            return False # غير متاح
+        return None
+    except:
+        return None
+
+def send_telegram(bot_token, chat_id, user):
+    if bot_token and chat_id:
+        try:
+            msg = f"✅ Available Instagram User: @{user}\nBy MIKHAEL"
+            requests.post(f"https://api.telegram.org/bot{bot_token}/sendMessage", data={'chat_id': chat_id, 'text': msg}, timeout=5)
+        except:
+            pass
+
+# الواجهة الرئيسية
+st.sidebar.header("⚙️ إعدادات الإرسال")
+bot_token = st.sidebar.text_input("Bot Token", type="password")
+chat_id = st.sidebar.text_input("Chat ID")
+
+pattern = st.radio(
+    "اختر نمط التخمين:",
+    [1, 2, 3],
+    format_func=lambda x: {
+        1: "1- نمط (a.ss1) -> (حرف . حرفين ورقم)",
+        2: "2- نمط (s.uio) -> (حرف . 3 أحرف)",
+        3: "3- خليط عشوائي بين النمطين"
+    }[x]
+)
+
+st.write("---")
+
+col1, col2, col3 = st.columns(3)
+metric_good = col1.metric("المتاحة (Good)", st.session_state.hits)
+metric_bad = col2.metric("المستعملة (Bad)", st.session_state.bad)
+status_box = col3.empty()
+
+start_button = st.button("🚀 بدء الصيد والتخمين")
+
+if start_button:
+    st.info("جاري الفحص الآن...")
+    stop_button = st.button("🛑 إيقاف")
+    
+    while True:
+        user = generate_username(pattern)
+        status_box.markdown(f"**جاري فحص:** `{user}`")
+        
+        result = check_username(user)
+        
+        if result is True:
+            st.session_state.hits += 1
+            st.session_state.found_users.append(user)
+            st.success(f"🎯 تم إيجاد يوزر متاح: @{user}")
+            send_telegram(bot_token, chat_id, user)
+            metric_good.metric("المتاحة (Good)", st.session_state.hits)
+        elif result is False:
+            st.session_state.bad += 1
+            metric_bad.metric("المستعملة (Bad)", st.session_state.bad)
+            
+        time.sleep(0.5)
+
+if st.session_state.found_users:
+    st.write("### 📋 اليوزرات المقبولة:")
+    st.text_area("Hits", value="\n".join(st.session_state.found_users), height=150)
+
